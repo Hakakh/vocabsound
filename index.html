@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lính Đặc Công Bắn Xe Tăng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f8ff;
+            padding: 10px;
+            line-height: 1.6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            margin: 10px auto;
+            background: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        #gameCanvas {
+            border: 2px solid #007bff;
+            background-color: #87ceeb;
+            display: block;
+            margin: 10px auto;
+            width: 100%;
+            max-width: 680px;
+            height: 300px;
+        }
+
+        .game-info {
+            margin: 10px 0;
+            font-size: 1em;
+            color: #555;
+        }
+
+        .target-month {
+            margin: 15px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .answer-box {
+            background: #eef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            min-height: 1.2em;
+            text-align: left;
+            word-wrap: break-word;
+            border: 1px solid #cce;
+            font-size: 0.95em;
+        }
+
+        button {
+            margin: 8px 4px;
+            padding: 10px 15px;
+            font-size: 0.95em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .feedback {
+            background: #e0ffe0;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            text-align: left;
+            border: 1px solid #a3e0a3;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+
+        .stars {
+            color: gold;
+            font-size: 1.5em;
+            margin-top: 10px;
+        }
+
+        /* Modal cho kết quả chia sẻ */
+        .result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .result-content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .result-content h2 {
+            color: #0056b3;
+            margin-bottom: 10px;
+        }
+
+        .result-content .stars {
+            font-size: 2em;
+            margin: 10px 0;
+        }
+
+        .result-content button {
+            margin: 10px;
+            padding: 10px 20px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+            .container {
+                padding: 10px;
+                margin: 5px auto;
+            }
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+            #gameCanvas {
+                height: 250px;
+            }
+            button {
+                padding: 8px 12px;
+                font-size: 0.9em;
+                margin: 5px 3px;
+            }
+            .target-month {
+                font-size: 1em;
+                margin: 10px 0;
+            }
+            .answer-box, .feedback {
+                font-size: 0.9em;
+                padding: 8px;
+            }
+            .result-content {
+                padding: 15px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Lính Đặc Công Bắn Xe Tăng</h1>
+
+        <div class="game-info">
+            Từ đã vượt qua: <span id="wordsCleared">0</span> / Tổng số: <span id="totalWords">0</span><br>
+            Từ đã xuất hiện: <span id="wordsAppeared">0</span>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="targetWordArea" class="target-month">
+            Nghe và đọc lại từ vựng bằng tiếng Anh (ví dụ: big).<br>
+            Bấm "Bắt đầu" để nghe từ đầu tiên!
+        </div>
+
+        <div>
+            <button onclick="window.speakWord()" id="startButton">🔊 Bắt đầu</button>
+            <button onclick="window.startRecognition()" id="answerButton">🎤 Trả lời</button>
+            <button onclick="window.restartGame()" id="restartButton" style="display: none;">🔄 Chơi lại</button>
+            <button onclick="window.skipWord()" id="skipButton" style="display: none;">➡️ Xin qua</button>
+            <button onclick="window.showResult()" id="shareButton" style="display: none;">📤 Chia sẻ kết quả</button>
+        </div>
+        <div id="transcript" class="answer-box"></div>
+        <div id="feedback" class="feedback" style="display: none;"></div>
+        <div id="starsDisplay" class="stars" style="display: none;"></div>
+
+        <!-- Modal kết quả -->
+        <div id="resultModal" class="result-modal">
+            <div class="result-content">
+                <h2 id="resultMessage"></h2>
+                <div id="modalStarsDisplay" class="stars"></div>
+                <button onclick="window.closeResult()">Đóng</button>
+                <button onclick="window.restartGame()">Chơi lại</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Cấu hình Game và Danh sách Từ vựng ---
+        const wordList = [
+            { word: "big" },
+            { word: "ride" },
+            { word: "high" },
+            { word: "drive" },
+            { word: "chopsticks" },
+            { word: "island" },
+            { word: "dish" },
+            { word: "cinema" },
+            { word: "ruler" },
+            { word: "purple" },
+            { word: "full" },
+            { word: "beautiful" },
+            { word: "cheap" },
+            { word: "meat" },
+            { word: "season" },
+            { word: "weather" },
+            { word: "bread" },
+            { word: "clean" },
+            { word: "meal" },
+            { word: "tea" },
+            { word: "fifty" },
+            { word: "city" },
+            { word: "study" },
+            { word: "my" },
+            { word: "twenty" },
+            { word: "happy" },
+            { word: "by" },
+            { word: "early" },
+            { word: "do" },
+            { word: "mother" },
+            { word: "brother" },
+            { word: "sometimes" },
+            { word: "late" },
+            { word: "place" },
+            { word: "take" },
+            { word: "dad" },
+            { word: "pink" },
+            { word: "nice" },
+            { word: "like" },
+            { word: "rice" },
+            { word: "bus" },
+            { word: "hungry" },
+            { word: "sugar" },
+            { word: "supper" },
+            { word: "small" },
+            { word: "face" },
+            { word: "grade" },
+            { word: "cut" },
+            { word: "luck" },
+            { word: "June" },
+            { word: "such" },
+            { word: "some" },
+            { word: "come" },
+            { word: "love" },
+            { word: "home" },
+            { word: "men" },
+            { word: "spend" },
+            { word: "send" },
+            { word: "evening" },
+            { word: "cook" },
+            { word: "look" },
+            { word: "book" },
+            { word: "floor" },
+            { word: "candy" },
+            { word: "cake" },
+            { word: "map" },
+            { word: "Math" },
+            { word: "sign" },
+            { word: "time" },
+            { word: "drink" },
+            { word: "food" },
+            { word: "too" },
+            { word: "soon" },
+            { word: "bike" },
+            { word: "student" },
+            { word: "brush" },
+            { word: "this" },
+            { word: "there" },
+            { word: "that" },
+            { word: "thank" },
+            { word: "post office" },
+            { word: "photo" },
+            { word: "telephone" },
+            { word: "toy store" },
+            { word: "name" },
+            { word: "cup" },
+            { word: "friend" },
+            { word: "trousers" },
+            { word: "want" },
+            { word: "game" },
+            { word: "same" },
+            { word: "good" },
+            { word: "room" },
+            { word: "hard" },
+            { word: "lazy" },
+            { word: "window" },
+            { word: "yellow" },
+            { word: "pencil" },
+            { word: "schoolbag" },
+            { word: "shirt" }
+        ];
+
+        let shuffledWords = [];
+        let currentWordIndex = 0;
+        let wordsAppeared = 0; // Thêm biến đếm từ đã xuất hiện
+        let attempts = 0;
+        let wordsCleared = 0;
+        let isGameOver = false;
+        let stars = 0;
+
+        // --- DOM Elements ---
+        const targetWordArea = document.getElementById("targetWordArea");
+        const transcriptDiv = document.getElementById("transcript");
+        const feedbackDiv = document.getElementById("feedback");
+        const startButton = document.getElementById("startButton");
+        const answerButton = document.getElementById("answerButton");
+        const restartButton = document.getElementById("restartButton");
+        const skipButton = document.getElementById("skipButton");
+        const shareButton = document.getElementById("shareButton");
+        const wordsClearedSpan = document.getElementById("wordsCleared");
+        const totalWordsSpan = document.getElementById("totalWords");
+        const wordsAppearedSpan = document.getElementById("wordsAppeared"); // Thêm tham chiếu
+        const starsDisplay = document.getElementById("starsDisplay");
+        const resultModal = document.getElementById("resultModal");
+        const resultMessage = document.getElementById("resultMessage");
+        const modalStarsDisplay = document.getElementById("modalStarsDisplay");
+
+        // --- Canvas Setup ---
+        const canvas = document.getElementById("gameCanvas");
+        let ctx = canvas.getContext("2d");
+
+        let canvasWidth;
+        let canvasHeight;
+
+        // --- Game Variables ---
+        const groundHeight = 40;
+        let groundY;
+        const playerSize = 40;
+        const playerColor = "#006400";
+        const playerShapeSize = 40;
+        let playerY;
+        let playerGroundY;
+        const playerX = 50;
+
+        const tankSize = 60;
+        const tankY = 120;
+        let tankTarget = { x: 0, y: tankY, width: tankSize, height: tankSize, cleared: false };
+
+        // Biến cho hiệu ứng bắn
+        let bulletX;
+        let bulletY;
+        let bulletColor = "yellow";
+        const bulletSpeed = 15;
+        let isShooting = false;
+        let isTankShooting = false;
+
+        // --- Audio Setup (using Tone.js) ---
+        let shootSynth = null;
+
+        // --- Function Definitions ---
+
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function resizeCanvas() {
+            canvasWidth = canvas.clientWidth;
+            canvasHeight = canvas.clientHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            ctx = canvas.getContext("2d");
+            groundY = canvasHeight - groundHeight;
+            playerGroundY = canvasHeight - groundHeight - playerSize;
+            playerY = playerGroundY;
+            bulletX = playerX + playerSize * 0.7;
+            bulletY = playerY + playerSize * 0.5;
+            initializeTankTarget();
+        }
+
+        function initializeTankTarget() {
+            tankTarget.x = canvasWidth - tankSize - 50;
+            tankTarget.y = tankY;
+            tankTarget.cleared = false;
+        }
+
+        function drawGround() {
+            ctx.fillStyle = "#a0522d";
+            ctx.fillRect(0, groundY, canvasWidth, groundHeight);
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = playerColor;
+            ctx.fillRect(playerX + playerShapeSize * 0.2, playerY, playerShapeSize * 0.6, playerShapeSize * 0.8);
+            ctx.beginPath();
+            ctx.arc(playerX + playerShapeSize / 2, playerY - playerShapeSize * 0.3, playerShapeSize * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(playerX + playerShapeSize * 0.1, playerY + playerShapeSize * 0.8, playerShapeSize * 0.3, playerShapeSize * 0.2);
+            ctx.fillRect(playerX + playerShapeSize * 0.6, playerY + playerShapeSize * 0.8, playerShapeSize * 0.3, playerShapeSize * 0.2);
+            ctx.fillRect(playerX + playerShapeSize * 0.7, playerY + playerShapeSize * 0.2, playerShapeSize * 0.3, playerShapeSize * 0.15);
+            ctx.fillRect(playerX + playerShapeSize * 0.7, playerY + playerShapeSize * 0.4, playerShapeSize * 0.3, playerShapeSize * 0.15);
+            ctx.fillStyle = "#333";
+            ctx.fillRect(playerX + playerShapeSize, playerY + playerShapeSize * 0.5, playerShapeSize * 0.5, playerShapeSize * 0.1);
+        }
+
+        function drawTankTarget() {
+            if (tankTarget.cleared || isGameOver || currentWordIndex >= shuffledWords.length) return;
+
+            // Vẽ xe tăng trực tiếp trên canvas
+            const tankX = tankTarget.x;
+            const tankY = tankTarget.y;
+
+            // Thân xe tăng (hình chữ nhật)
+            ctx.fillStyle = "#8B4513"; // Màu nâu
+            ctx.fillRect(tankX, tankY + tankSize * 0.3, tankSize, tankSize * 0.4);
+
+            // Bánh xích (4 hình tròn nhỏ)
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(tankX + tankSize * 0.2, tankY + tankSize * 0.7, tankSize * 0.1, 0, Math.PI * 2);
+            ctx.arc(tankX + tankSize * 0.4, tankY + tankSize * 0.7, tankSize * 0.1, 0, Math.PI * 2);
+            ctx.arc(tankX + tankSize * 0.6, tankY + tankSize * 0.7, tankSize * 0.1, 0, Math.PI * 2);
+            ctx.arc(tankX + tankSize * 0.8, tankY + tankSize * 0.7, tankSize * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tháp pháo (hình tròn)
+            ctx.fillStyle = "#A0522D"; // Màu nâu nhạt
+            ctx.beginPath();
+            ctx.arc(tankX + tankSize * 0.5, tankY + tankSize * 0.3, tankSize * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nòng súng (hình chữ nhật mỏng)
+            ctx.fillStyle = "#000";
+            ctx.fillRect(tankX + tankSize * 0.5, tankY, tankSize * 0.3, tankSize * 0.1);
+
+            // Ngôi sao (hình tròn nhỏ màu đỏ)
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.arc(tankX + tankSize * 0.5, tankY + tankSize * 0.5, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hiển thị từ vựng
+            ctx.font = "14px Arial";
+            ctx.fillStyle = "#000";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const wordText = `${shuffledWords[currentWordIndex].word}`;
+            ctx.fillText(wordText, tankX + tankSize / 2, tankY + tankSize + 20);
+        }
+
+        function drawBullet() {
+            if (isShooting || isTankShooting) {
+                ctx.fillStyle = bulletColor;
+                ctx.beginPath();
+                ctx.arc(bulletX, bulletY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawGameOver() {
+            if (isGameOver) {
+                ctx.font = "40px Arial";
+                ctx.fillStyle = "red";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Game Over!", canvasWidth / 2, canvasHeight / 2);
+            }
+        }
+
+        function drawGame() {
+            if (!ctx) {
+                console.error("Canvas context is not available.");
+                return;
+            }
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            drawGround();
+            drawTankTarget();
+            drawPlayer();
+            drawBullet();
+            drawGameOver();
+        }
+
+        function gameLoop() {
+            if (isShooting) {
+                const targetX = tankTarget.x + tankSize / 2;
+                const targetY = tankTarget.y + tankSize / 2;
+                const deltaX = targetX - bulletX;
+                const deltaY = targetY - bulletY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                if (distance > bulletSpeed) {
+                    bulletX += (deltaX / distance) * bulletSpeed;
+                    bulletY += (deltaY / distance) * bulletSpeed;
+                } else {
+                    bulletX = targetX;
+                    bulletY = targetY;
+                    isShooting = false;
+                    tankTarget.cleared = true;
+                    bulletX = playerX + playerSize * 0.7;
+                    bulletY = playerY + playerSize * 0.5;
+                    setTimeout(() => {
+                        loadNextWord();
+                    }, 500);
+                }
+            } else if (isTankShooting) {
+                const targetX = playerX + playerSize / 2;
+                const targetY = playerY + playerSize / 2;
+                const deltaX = targetX - bulletX;
+                const deltaY = targetY - bulletY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                if (distance > bulletSpeed) {
+                    bulletX += (deltaX / distance) * bulletSpeed;
+                    bulletY += (deltaY / distance) * bulletSpeed;
+                } else {
+                    bulletX = targetX;
+                    bulletY = targetY;
+                    isTankShooting = false;
+                    bulletX = tankTarget.x + tankSize / 2;
+                    bulletY = tankTarget.y + tankSize / 2;
+                }
+            }
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Speech Recognition and Synthesis ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function (event) {
+                const transcript = event.results[0][0].transcript.trim().toLowerCase();
+                transcriptDiv.textContent = `Bạn nói: ${transcript}`;
+                provideFeedback(transcript);
+                answerButton.disabled = false;
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Lỗi nhận dạng giọng nói:", event.error);
+                let errorMessage;
+                switch (event.error) {
+                    case 'no-speech':
+                        errorMessage = "Không phát hiện giọng nói. Vui lòng thử lại.";
+                        break;
+                    case 'audio-capture':
+                        errorMessage = "Lỗi thu âm thanh. Vui lòng kiểm tra micro.";
+                        break;
+                    case 'not-allowed':
+                        errorMessage = "Quyền truy cập micro bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt.";
+                        break;
+                    default:
+                        errorMessage = `Lỗi nhận dạng giọng nói: ${event.error}. Vui lòng thử lại.`;
+                }
+                feedbackDiv.textContent = errorMessage;
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.style.backgroundColor = '#f8d7da';
+                feedbackDiv.style.borderColor = '#f5c6cb';
+                speakText(errorMessage, 'vi-VN');
+                answerButton.disabled = false;
+            };
+
+            recognition.onstart = function() {
+                answerButton.disabled = true;
+                transcriptDiv.textContent = "Đang nghe...";
+                feedbackDiv.style.display = 'none';
+            };
+
+            recognition.onend = function() {
+                answerButton.disabled = false;
+                if (transcriptDiv.textContent === "Đang nghe...") {
+                    transcriptDiv.textContent = "Không phát hiện thấy giọng nói.";
+                    feedbackDiv.textContent = "Không phát hiện thấy giọng nói. Vui lòng thử lại!";
+                    feedbackDiv.style.display = 'block';
+                    feedbackDiv.style.backgroundColor = '#fff3cd';
+                    feedbackDiv.style.borderColor = '#ffeeba';
+                    speakText("Không phát hiện thấy giọng nói. Vui lòng thử lại!", 'vi-VN');
+                }
+            };
+        } else {
+            console.warn("Speech Recognition API not supported.");
+            answerButton.disabled = true;
+            answerButton.textContent = "🎤 API không hỗ trợ";
+            targetWordArea.textContent = "Trình duyệt không hỗ trợ nhận dạng giọng nói. Vui lòng dùng Google Chrome.";
+            feedbackDiv.textContent = "Trình duyệt không hỗ trợ nhận dạng giọng nói.";
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.style.backgroundColor = '#f8d7da';
+            feedbackDiv.style.borderColor = '#f5c6cb';
+        }
+
+        function speakText(text, lang = 'en-US') {
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.onerror = (event) => {
+                console.error("Lỗi phát giọng nói:", event.error);
+                feedbackDiv.textContent = "Lỗi phát giọng nói: " + event.error + ". Vui lòng kiểm tra quyền truy cập hoặc chạy trên localhost.";
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.style.backgroundColor = '#f8d7da';
+                feedbackDiv.style.borderColor = '#f5c6cb';
+            };
+            speechSynthesis.speak(utterance);
+        }
+
+        function isCorrectWord(spokenText, expectedWord) {
+            const normalizedSpoken = spokenText.trim().toLowerCase().replace(/[.,!]/g, '');
+            const normalizedExpected = expectedWord.toLowerCase().replace(/[.,!]/g, '');
+            return normalizedSpoken === normalizedExpected;
+        }
+
+        function calculateStars() {
+            const totalWords = wordList.length; // 100
+            const oneThird = Math.floor(totalWords / 3); // 33
+            const twoThirds = Math.floor((totalWords * 2) / 3); // 66
+
+            if (wordsCleared === totalWords) {
+                stars = 4; // Đọc đúng toàn bộ
+            } else if (wordsCleared > twoThirds) {
+                stars = 3; // Hơn 2/3 (67 trở lên)
+            } else if (wordsCleared >= twoThirds) {
+                stars = 2; // 2/3 (66)
+            } else if (wordsCleared >= oneThird) {
+                stars = 1; // 1/3 (33)
+            } else {
+                stars = 0; // Dưới 1/3
+            }
+
+            // Hiển thị ngôi sao
+            starsDisplay.textContent = "★".repeat(stars);
+            starsDisplay.style.display = 'block';
+        }
+
+        function provideFeedback(spokenText) {
+            if (isGameOver) return;
+            feedbackDiv.style.display = 'block';
+            const expectedWord = shuffledWords[currentWordIndex].word;
+
+            let comment, speakFeedbackText;
+            if (!spokenText || spokenText.trim() === "") {
+                comment = "⚠️ Không phát hiện giọng nói. Vui lòng thử lại!";
+                speakFeedbackText = "Không phát hiện giọng nói. Vui lòng thử lại!";
+                feedbackDiv.style.backgroundColor = '#fff3cd';
+                feedbackDiv.style.borderColor = '#ffeeba';
+            } else if (isCorrectWord(spokenText, expectedWord)) {
+                comment = `Bạn đọc đúng rồi!`;
+                speakFeedbackText = `Bạn đọc đúng rồi!`;
+                feedbackDiv.style.backgroundColor = '#d4edda';
+                feedbackDiv.style.borderColor = '#c3e6cb';
+                wordsCleared++;
+                wordsClearedSpan.textContent = wordsCleared;
+                // Hiển thị nút chia sẻ khi có ít nhất 1 từ đúng
+                if (wordsCleared >= 1) {
+                    shareButton.style.display = 'inline';
+                }
+                answerButton.disabled = true;
+                startButton.disabled = true;
+                isShooting = true;
+                bulletColor = "yellow";
+                bulletX = playerX + playerSize * 0.7;
+                bulletY = playerY + playerSize * 0.5;
+                if (shootSynth) {
+                    shootSynth.triggerAttackRelease("C4", "32n");
+                }
+            } else {
+                attempts++;
+                comment = `Bạn đọc chưa đúng! Hãy thử lại!`;
+                speakFeedbackText = `Bạn đọc chưa đúng! Hãy thử lại!`;
+                feedbackDiv.style.backgroundColor = '#f8d7da';
+                feedbackDiv.style.borderColor = '#f5c6cb';
+                isTankShooting = true;
+                bulletColor = "red";
+                bulletX = tankTarget.x + tankSize / 2;
+                bulletY = tankTarget.y + tankSize / 2;
+                if (shootSynth) {
+                    shootSynth.triggerAttackRelease("C4", "32n");
+                }
+                if (attempts >= 3) {
+                    comment = `Game Over! Bạn đã thử sai 3 lần.`;
+                    speakFeedbackText = `Game Over! Bạn đã thử sai ba lần.`;
+                    isGameOver = true;
+                    answerButton.disabled = true;
+                    startButton.disabled = true;
+                    restartButton.style.display = 'inline';
+                    skipButton.style.display = 'inline';
+                    shareButton.style.display = 'inline'; // Hiển thị nút chia sẻ khi Game Over
+                    calculateStars();
+                }
+            }
+
+            feedbackDiv.textContent = comment;
+            speakText(speakFeedbackText, 'vi-VN');
+        }
+
+        function loadWord(index) {
+            if (index >= shuffledWords.length) {
+                targetWordArea.innerHTML = "Chúc mừng! Bạn đã vượt qua tất cả các từ vựng!";
+                feedbackDiv.textContent = "Chúc mừng! Bạn đã hoàn thành trò chơi!";
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.style.backgroundColor = '#d4edda';
+                feedbackDiv.style.borderColor = '#c3e6cb';
+                answerButton.disabled = true;
+                startButton.disabled = true;
+                restartButton.style.display = 'inline';
+                skipButton.style.display = 'none';
+                shareButton.style.display = 'inline'; // Hiển thị nút chia sẻ khi hoàn thành
+                calculateStars();
+                return false;
+            }
+
+            attempts = 0;
+            isGameOver = false;
+            wordsAppeared++; // Tăng số từ đã xuất hiện khi tải từ mới
+            wordsAppearedSpan.textContent = wordsAppeared; // Cập nhật hiển thị
+            targetWordArea.innerHTML = `Đọc: <strong>${shuffledWords[index].word}</strong>`;
+            transcriptDiv.textContent = '';
+            feedbackDiv.style.display = 'none';
+            answerButton.disabled = false;
+            startButton.disabled = false;
+            restartButton.style.display = 'none';
+            skipButton.style.display = 'none';
+            // Chỉ ẩn nút chia sẻ nếu chưa có từ nào đúng
+            if (wordsCleared < 1) {
+                shareButton.style.display = 'none';
+            }
+            starsDisplay.style.display = 'none';
+            initializeTankTarget();
+            return true;
+        }
+
+        function loadNextWord() {
+            currentWordIndex++;
+            loadWord(currentWordIndex);
+        }
+
+        function speakWord() {
+            if (isGameOver || currentWordIndex >= shuffledWords.length) return;
+            speakText(shuffledWords[currentWordIndex].word, 'en-US');
+        }
+
+        function startRecognition() {
+            if (isGameOver || !recognition) return;
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error("Lỗi khi bắt đầu nhận dạng giọng nói:", e);
+                feedbackDiv.textContent = "Lỗi khi bắt đầu nhận dạng giọng nói. Vui lòng thử lại.";
+                feedbackDiv.style.display = 'block';
+                feedbackDiv.style.backgroundColor = '#f8d7da';
+                feedbackDiv.style.borderColor = '#f5c6cb';
+            }
+        }
+
+        function restartGame() {
+            shuffledWords = shuffleArray(wordList);
+            currentWordIndex = 0;
+            wordsCleared = 0;
+            attempts = 0;
+            isGameOver = false;
+            stars = 0;
+            wordsAppeared = 0; // Đặt lại số từ đã xuất hiện khi khởi động lại
+            wordsClearedSpan.textContent = '0';
+            wordsAppearedSpan.textContent = '0'; // Đặt lại hiển thị
+            targetWordArea.innerHTML = "Nghe và đọc lại từ vựng bằng tiếng Anh (ví dụ: big).<br>Bấm \"Bắt đầu\" để nghe từ đầu tiên!";
+            loadWord(currentWordIndex);
+            closeResult();
+        }
+
+        function skipWord() {
+            currentWordIndex++;
+            loadWord(currentWordIndex);
+        }
+
+        function showResult() {
+            calculateStars();
+            modalStarsDisplay.textContent = "★".repeat(stars);
+            if (stars === 1) {
+                resultMessage.textContent = "Bạn cần cố gắng thêm!";
+            } else {
+                resultMessage.textContent = `Chúc mừng bạn đã đạt ${stars} sao! 🎉`;
+            }
+            resultModal.style.display = 'flex';
+        }
+
+        function closeResult() {
+            resultModal.style.display = 'none';
+        }
+
+        // --- Initialization ---
+
+        window.loadWord = loadWord;
+        window.speakWord = speakWord;
+        window.startRecognition = startRecognition;
+        window.restartGame = restartGame;
+        window.skipWord = skipWord;
+        window.isCorrectWord = isCorrectWord;
+        window.initializeTankTarget = initializeTankTarget;
+        window.handleFirstInteraction = handleFirstInteraction;
+        window.showResult = showResult;
+        window.closeResult = closeResult;
+
+        function initGame() {
+            console.log("Initializing game...");
+            totalWordsSpan.textContent = wordList.length;
+            shuffledWords = shuffleArray(wordList);
+            resizeCanvas();
+            document.addEventListener('click', window.handleFirstInteraction, { once: true });
+        }
+
+        function handleFirstInteraction() {
+            console.log("First user interaction detected.");
+            if (!shootSynth) {
+                try {
+                    shootSynth = new Tone.Synth({
+                        oscillator: { type: "square" },
+                        envelope: { attack: 0.001, decay: 0.05, sustain: 0.01, release: 0.1 }
+                    }).toDestination();
+                    console.log("Tone.js shootSynth initialized.");
+                } catch (e) {
+                    console.error("Lỗi khởi tạo Tone.js:", e);
+                }
+            }
+
+            if (Tone.context.state !== 'running') {
+                Tone.context.resume().then(() => {
+                    console.log('AudioContext resumed successfully.');
+                }).catch(e => {
+                    console.error('Error resuming AudioContext:', e);
+                });
+            }
+
+            loadWord(currentWordIndex);
+            gameLoop();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
